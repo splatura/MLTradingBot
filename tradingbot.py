@@ -7,9 +7,20 @@ from alpaca_trade_api import REST
 from timedelta import Timedelta 
 from finbert_utils import estimate_sentiment
 
-API_KEY = "YOUR API KEY" 
-API_SECRET = "YOUR API SECRET" 
-BASE_URL = "https://paper-api.alpaca.markets"
+import json
+
+def get_value_from_json(json_file, key, sub_key):
+   try:
+       with open(json_file) as f:
+           data = json.load(f)
+           return data[key][sub_key]
+   except Exception as e:
+       print("Error: ", e)
+
+json_file = "secrets.json"
+API_KEY = get_value_from_json(json_file,"ALPACA_CREDS","API_KEY")
+API_SECRET = get_value_from_json(json_file,"ALPACA_CREDS","API_SECRET")
+BASE_URL = get_value_from_json(json_file,"ALPACA_CREDS","BASE_URL")
 
 ALPACA_CREDS = {
     "API_KEY":API_KEY, 
