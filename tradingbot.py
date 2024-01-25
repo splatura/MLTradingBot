@@ -6,7 +6,8 @@ from datetime import datetime
 from alpaca_trade_api import REST 
 from timedelta import Timedelta 
 from finbert_utils import estimate_sentiment
-
+import requests
+from requests.auth import HTTPBasicAuth
 import json
 
 def get_value_from_json(json_file, key, sub_key):
@@ -29,7 +30,7 @@ ALPACA_CREDS = {
 }
 
 class MLTrader(Strategy): 
-    def initialize(self, symbol:str="SPY", cash_at_risk:float=.5): 
+    def initialize(self, symbol:str="AMD", cash_at_risk:float=.5): 
         self.symbol = symbol
         self.sleeptime = "24H" 
         self.last_trade = None 
@@ -49,12 +50,35 @@ class MLTrader(Strategy):
 
     def get_sentiment(self): 
         today, three_days_prior = self.get_dates()
-        news = self.api.get_news(symbol=self.symbol, 
-                                 start=three_days_prior, 
-                                 end=today) 
-        news = [ev.__dict__["_raw"]["headline"] for ev in news]
-        probability, sentiment = estimate_sentiment(news)
-        return probability, sentiment 
+        
+        url = "https://data.alpaca.markets/v1beta1/news"
+        params = {
+            'symbols': self.symbol,
+            'start': three_days_prior,
+            'end': today
+        }
+        headers = {
+            "APCA-API-KEY-ID": API_KEY,
+            "APCA-API-SECRET-KEY": API_SECRET
+        }
+
+        response = requests.get(url, params=params, headers=headers)
+        if response.status_code == 200:
+            news_data = response.json()
+        
+            # Extracting news from the 'news' key in the response
+            news_items = news_data.get('news', [])
+#            print(news_items)
+            if news_items:
+                news_headlines = [item["headline"] for item in news_items]
+                probability, sentiment = estimate_sentiment(news_headlines)
+                return probability, sentiment
+            else:
+                print("No news items found in the response")
+                return None, None
+        else:
+            print(f"Failed to fetch news: {response.status_code}")
+            return None, None
 
     def on_trading_iteration(self):
         cash, last_price, quantity = self.position_sizing() 
@@ -88,17 +112,17 @@ class MLTrader(Strategy):
                 self.submit_order(order) 
                 self.last_trade = "sell"
 
-start_date = datetime(2020,1,1)
-end_date = datetime(2023,12,31) 
+start_date = datetime(2023,1,1)
+end_date = datetime(2024,1,23) 
 broker = Alpaca(ALPACA_CREDS) 
 strategy = MLTrader(name='mlstrat', broker=broker, 
-                    parameters={"symbol":"SPY", 
+                    parameters={"symbol":"AMD", 
                                 "cash_at_risk":.5})
 strategy.backtest(
     YahooDataBacktesting, 
     start_date, 
     end_date, 
-    parameters={"symbol":"SPY", "cash_at_risk":.5}
+    parameters={"symbol":"AMD", "cash_at_risk":.5}
 )
 # trader = Trader()
 # trader.add_strategy(strategy)
