@@ -29,8 +29,10 @@ ALPACA_CREDS = {
     "PAPER": True
 }
 
+STOCK_SYMBOL = "MCD"
+
 class MLTrader(Strategy): 
-    def initialize(self, symbol:str="AMD", cash_at_risk:float=.5): 
+    def initialize(self, symbol:str=STOCK_SYMBOL, cash_at_risk:float=.5): 
         self.symbol = symbol
         self.sleeptime = "24H" 
         self.last_trade = None 
@@ -85,7 +87,7 @@ class MLTrader(Strategy):
         probability, sentiment = self.get_sentiment()
 
         if cash > last_price: 
-            if sentiment == "positive" and probability > .999: 
+            if sentiment == "positive" and probability > .9: 
                 if self.last_trade == "sell": 
                     self.sell_all() 
                 order = self.create_order(
@@ -98,7 +100,7 @@ class MLTrader(Strategy):
                 )
                 self.submit_order(order) 
                 self.last_trade = "buy"
-            elif sentiment == "negative" and probability > .999: 
+            elif sentiment == "negative" and probability > .8: 
                 if self.last_trade == "buy": 
                     self.sell_all() 
                 order = self.create_order(
@@ -116,14 +118,14 @@ start_date = datetime(2023,1,1)
 end_date = datetime(2024,1,23) 
 broker = Alpaca(ALPACA_CREDS) 
 strategy = MLTrader(name='mlstrat', broker=broker, 
-                    parameters={"symbol":"AMD", 
+                    parameters={"symbol":STOCK_SYMBOL, 
                                 "cash_at_risk":.5})
-strategy.backtest(
-    YahooDataBacktesting, 
-    start_date, 
-    end_date, 
-    parameters={"symbol":"AMD", "cash_at_risk":.5}
-)
-# trader = Trader()
-# trader.add_strategy(strategy)
-# trader.run_all()
+#strategy.backtest(
+#    YahooDataBacktesting, 
+#    start_date, 
+#    end_date, 
+#    parameters={"symbol":"SPY", "cash_at_risk":.5}
+#)
+trader = Trader()
+trader.add_strategy(strategy)
+trader.run_all()
